@@ -11,10 +11,14 @@
 git clone https://github.com/GolantG/cloud-event-management.git
 cd cloud-event-management
 
-# 2. Uruchom aplikację
+# 2. Zainstaluj zależnoście
+cd backend
+npm install
+
+# 3. Uruchom aplikację
 docker-compose up --build
 
-# 3. Otwórz przeglądarkę i przejdź do:
+# 4. Otwórz przeglądarkę i przejdź do:
 #    - Interfejs użytkownika: otwórz plik frontend/index.html
 #    - API backendu: http://localhost:3001/api
 
