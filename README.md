@@ -12,8 +12,8 @@
 - cd cloud-event-management
 
 # 2. Zainstaluj zależnoście
-cd backend
-npm install
+- cd backend
+- npm install
 
 # 3. Uruchom aplikację
 - docker-compose up --build
