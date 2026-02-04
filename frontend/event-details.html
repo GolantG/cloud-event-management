@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details - Event Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">Event Manager</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="events.html">Events</a></li>
+                <li><a href="manage-events.html">Manage Events</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="padding: 2rem 0;">
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <div id="eventDetails">
+            <div style="text-align: center; padding: 3rem;">
+                <p>Loading event details...</p>
+            </div>
+        </div>
+        
+        <div id="registrationForm" style="display: none;">
+            <div class="card" style="margin-top: 2rem;">
+                <h2>Register for this Event</h2>
+                <form id="registerForm" onsubmit="registerParticipant(event)">
+                    <div class="form-group">
+                        <label for="participantName">Full Name *</label>
+                        <input type="text" id="participantName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="participantEmail">Email Address</label>
+                        <input type="email" id="participantEmail" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="participantPhone">Phone Number</label>
+                        <input type="tel" id="participantPhone" class="form-control">
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-success">Register Now</button>
+                        <button type="button" class="btn btn-secondary" onclick="toggleRegistrationForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="participantsSection" style="display: none;">
+            <div class="participants-list">
+                <h2>Registered Participants</h2>
+                <div id="participantsList">
+                </div>
+            </div>
+        </div>
+        
+        <div id="actionButtons" style="margin-top: 2rem; display: none;">
+            <button onclick="toggleRegistrationForm()" class="btn btn-success">
+                Register for this Event
+            </button>
+            <a href="events.html" class="btn btn-secondary" style="margin-left: 1rem;">
+                Back to Events
+            </a>
+            <a href="#" id="editEventLink" class="btn" style="margin-left: 1rem;">
+                Edit Event
+            </a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Event Manager System</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+        let currentEventId = null;
+        let currentEvent = null;
+        
+        function getEventIdFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+        
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function loadEventDetails() {
+            currentEventId = getEventIdFromURL();
+            
+            if (!currentEventId) {
+                document.getElementById('eventDetails').innerHTML = `
+                    <div class="message error">
+                        No event ID specified.
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/events/${currentEventId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Event not found');
+                }
+                
+                const data = await response.json();
+                currentEvent = data.event;
+                
+                displayEventDetails(data.event);
+                displayParticipants(data.participants);
+                
+                document.getElementById('actionButtons').style.display = 'block';
+                document.getElementById('participantsSection').style.display = 'block';
+                document.getElementById('editEventLink').href = `manage-events.html?edit=${currentEventId}`;
+                
+            } catch (error) {
+                document.getElementById('eventDetails').innerHTML = `
+                    <div class="message error">
+                        Error loading event: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function displayEventDetails(event) {
+            const eventDetailsDiv = document.getElementById('eventDetails');
+            
+            const isFull = event.max_participants && 
+                          event.participants_count >= event.max_participants;
+            
+            eventDetailsDiv.innerHTML = `
+                <div class="card">
+                    <h1>${event.title}</h1>
+                    
+                    <div class="event-meta" style="margin-bottom: 1.5rem;">
+                        <span>Date: ${new Date(event.date).toLocaleDateString()}</span>
+                        <span>Time: ${event.time ? event.time.substring(0,5) : 'Time TBD'}</span>
+                        <span>Location: ${event.location || 'Location TBD'}</span>
+                        <span>Participants: ${event.participants_count || 0} / ${event.max_participants || '∞'}</span>
+                    </div>
+                    
+                    ${isFull ? `
+                        <div class="message error" style="margin-bottom: 1.5rem;">
+                            This event is full!
+                        </div>
+                    ` : ''}
+                    
+                    <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <h3>Event Description</h3>
+                        <p>${event.description || 'No description provided.'}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function displayParticipants(participants) {
+            const participantsListDiv = document.getElementById('participantsList');
+            
+            if (participants.length === 0) {
+                participantsListDiv.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <p>No participants yet. Be the first to register!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            participantsListDiv.innerHTML = participants.map(participant => `
+                <div class="participant-item">
+                    <div>
+                        <strong>${participant.name}</strong>
+                        <div style="color: #666; font-size: 0.9rem; margin-top: 0.25rem;">
+                            ${participant.email ? `Email: ${participant.email}` : ''}
+                            ${participant.phone ? `<br>Phone: ${participant.phone}` : ''}
+                        </div>
+                    </div>
+                    <div style="color: #888; font-size: 0.85rem;">
+                        Registered: ${new Date(participant.registered_at).toLocaleDateString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function toggleRegistrationForm() {
+            const form = document.getElementById('registrationForm');
+            const isFull = currentEvent.max_participants && 
+                          currentEvent.participants_count >= currentEvent.max_participants;
+            
+            if (isFull) {
+                showMessage('This event is full. Cannot register new participants.', 'error');
+                return;
+            }
+            
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        async function registerParticipant(event) {
+            event.preventDefault();
+            
+            const participantData = {
+                event_id: currentEventId,
+                name: document.getElementById('participantName').value,
+                email: document.getElementById('participantEmail').value,
+                phone: document.getElementById('participantPhone').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/participants`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(participantData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Successfully registered for the event!', 'success');
+                    document.getElementById('registerForm').reset();
+                    toggleRegistrationForm();
+                    loadEventDetails();
+                } else {
+                    showMessage(`Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadEventDetails);
+    </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Manager - All Events</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">Event Manager</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="events.html" class="active">Events</a></li>
+                <li><a href="manage-events.html">Manage Events</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="padding: 2rem 0;">
+        <h1>All Events</h1>
+        
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="flex: 1;">
+                    <input type="text" id="searchInput" placeholder="Search events..." class="form-control">
+                </div>
+                <select id="sortSelect" class="form-control" style="width: auto;">
+                    <option value="date-asc">Date: Earliest First</option>
+                    <option value="date-desc">Date: Latest First</option>
+                </select>
+                <button onclick="filterEvents()" class="btn">Filter</button>
+            </div>
+        </div>
+        
+        <div id="eventsList">
+            <div style="text-align: center; padding: 3rem;">
+                <p>Loading events...</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Event Manager System</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+        let allEvents = [];
+        
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function loadEvents() {
+            try {
+                const response = await fetch(`${API_URL}/events`);
+                allEvents = await response.json();
+                displayEvents(allEvents);
+            } catch (error) {
+                document.getElementById('eventsList').innerHTML = `
+                    <div class="message error">
+                        Error loading events.
+                    </div>
+                `;
+            }
+        }
+        
+        function displayEvents(events) {
+            const eventsList = document.getElementById('eventsList');
+            
+            if (events.length === 0) {
+                eventsList.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px;">
+                        <h3>No events found</h3>
+                        <p>Try adjusting your search or create a new event.</p>
+                        <a href="manage-events.html" class="btn" style="margin-top: 1rem;">
+                            Create New Event
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+            
+            eventsList.innerHTML = events.map(event => `
+                <div class="event-card">
+                    <div class="event-info">
+                        <h3>${event.title}</h3>
+                        <div class="event-meta">
+                            <span>Date: ${new Date(event.date).toLocaleDateString()}</span>
+                            <span>Time: ${event.time ? event.time.substring(0,5) : 'TBD'}</span>
+                            <span>Location: ${event.location || 'Location TBD'}</span>
+                            <span>Participants: ${event.participants_count || 0}</span>
+                        </div>
+                        <p>${event.description ? event.description.substring(0, 200) + '...' : 'No description provided.'}</p>
+                        <div style="display: flex; gap: 10px; margin-top: 1rem;">
+                            <a href="event-details.html?id=${event.id}" class="btn">
+                                View Details
+                            </a>
+                            <a href="manage-events.html?edit=${event.id}" class="btn btn-secondary">
+                                Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterEvents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            let filteredEvents = allEvents.filter(event => 
+                event.title.toLowerCase().includes(searchTerm) ||
+                (event.description && event.description.toLowerCase().includes(searchTerm)) ||
+                (event.location && event.location.toLowerCase().includes(searchTerm))
+            );
+            
+            if (sortBy === 'date-asc') {
+                filteredEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+            } else if (sortBy === 'date-desc') {
+                filteredEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
+            
+            displayEvents(filteredEvents);
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadEvents);
+        document.getElementById('searchInput').addEventListener('input', filterEvents);
+    </script>
+</body>
+</html>

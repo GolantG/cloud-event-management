@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Manager - Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">Event Manager</div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="events.html">Events</a></li>
+                <li><a href="manage-events.html">Manage Events</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="text-align: center; padding: 3rem 0;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">Event Manager</h1>
+            <p style="font-size: 1.2rem; margin-bottom: 2rem; color: #666;">
+                Create, organize, and track events
+            </p>
+            <a href="events.html" class="btn" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                Browse Events
+            </a>
+            <a href="manage-events.html" class="btn btn-secondary" style="font-size: 1.1rem; padding: 1rem 2rem; margin-left: 1rem;">
+                Create Event
+            </a>
+        </div>
+
+        <div class="stats-container" id="statsContainer">
+        </div>
+
+        <h2 style="text-align: center; margin-bottom: 2rem;">Upcoming Events</h2>
+        <div id="upcomingEvents" class="events-grid">
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Event Manager System</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+        
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                const stats = await response.json();
+                
+                document.getElementById('statsContainer').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.events}</div>
+                        <div class="stat-label">Total Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.participants}</div>
+                        <div class="stat-label">Total Participants</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadUpcomingEvents() {
+            try {
+                const response = await fetch(`${API_URL}/events`);
+                const events = await response.json();
+                
+                const today = new Date().toISOString().split('T')[0];
+                const upcoming = events
+                    .filter(event => event.date >= today)
+                    .slice(0, 3);
+                
+                document.getElementById('upcomingEvents').innerHTML = upcoming.map(event => `
+                    <div class="card">
+                        <h3>${event.title}</h3>
+                        <div class="event-meta">
+                            <span>Date: ${new Date(event.date).toLocaleDateString()}</span>
+                            <span>Participants: ${event.participants_count || 0}</span>
+                        </div>
+                        <p>${event.description ? event.description.substring(0, 100) + '...' : 'No description'}</p>
+                        <div style="margin-top: 1rem;">
+                            <a href="event-details.html?id=${event.id}" class="btn">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading events:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadUpcomingEvents();
+        });
+    </script>
+</body>
+</html>
